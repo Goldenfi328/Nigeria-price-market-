@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Naija Price Market 🇳🇬</title>
+<style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+  body { margin: 0; background: #f0fdf4; }
+.header { background: linear-gradient(135deg, #15803d, #16a34a); color: white; padding: 18px; text-align: center; }
+.header h1 { margin: 8px 0 0; font-size: 24px; font-weight: 700; }
+.header p { margin: 5px 0 0; font-size: 14px; }
+.container { padding: 15px; max-width: 700px; margin: auto; }
+.card { background: white; padding: 18px; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  select, input, button { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #d1d5db; border-radius: 10px; font-size: 16px; }
+  button { background: #16a34a; color: white; border: none; font-weight: 600; cursor: pointer; }
+.btn-orange { background: #f97316; font-weight: 700; }
+.btn-back { background: #9ca3af; margin-bottom: 10px; padding: 10px; }
+.step { display: none; }
+.step.active { display: block; animation: fadeIn 0.3s; }
+@keyframes fadeIn { from {opacity:0; transform: translateY(10px);} to {opacity:1; transform: translateY(0);} }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid-btn { background: white; border: 1px solid #e5e7eb; padding: 12px; border-radius: 10px; text-align: center; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.grid-btn:hover { border-color: #16a34a; background: #f0fdf4; }
+.price-card { background: white; padding: 14px; border-radius: 12px; margin: 10px 0; border-left: 4px solid #16a34a; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+.price { color: #15803d; font-weight: 700; font-size: 20px; }
+.store-name { font-weight: 600; font-size: 16px; }
+.location { font-size: 12px; color: #6b7280; }
+.vendor-input { display: flex; gap: 10px; }
+.vendor-input input { flex: 1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="logo.png" alt="Naija Price Logo" style="width:55px; height:55px; border-radius:12px; margin-bottom:8px; background:white; padding:5px;">
+  <h1>Naija Price Market 🇳🇬</h1>
+  <p id="headerText">Step 1: Select Your State</p>
+</div>
+
+<div class="container">
+  <button id="backBtn" class="btn-back" style="display:none;" onclick="goBack()">← Back</button>
+
+  <!-- STEP 1 -->
+  <div id="step1" class="step active">
+    <div class="card">
+      <h3>Compare Food Prices Across 400+ Markets! 🛒🍅</h3>
+      <h4>🔍 Quick Search</h4>
+      <input type="text" id="quickSearch" placeholder="Search item e.g Rice">
+      <button onclick="quickSearch()">Search Nationwide</button>
+      <hr>
+      <h4>1. Select Your State</h4>
+      <select id="stateSelect" onchange="loadMarkets()">
+        <option value="">-- Choose State --</option>
+      </select>
+    </div>
+    <button class="btn-orange" onclick="showVendorLogin()">💰 Are you a Vendor? List Your Shop for ₦2,000/month</button>
+  </div>
+
+  <!-- STEP 2: MARKETS -->
+  <div id="step2" class="step">
+    <div class="card">
+      <h4>2. Markets in <span id="selectedState"></span></h4>
+      <div class="grid" id="marketGrid"></div>
+    </div>
+  </div>
+
+  <!-- STEP 3: ITEMS -->
+  <div id="step3" class="step">
+    <div class="card">
+      <h4>3. Goods in <span id="marketTitle"></span></h4>
+      <div class="grid" id="itemGrid"></div>
+    </div>
+  </div>
+
+  <!-- STEP 4: PRICES -->
+  <div id="step4" class="step">
+    <div class="card">
+      <h4>4. Price Comparison for <span id="selectedItem"></span></h4>
+      <p style="font-size:12px; color:#666;">Sorted: Cheapest to Most Expensive</p>
+      <div id="priceList"></div>
+    </div>
+  </div>
+
+  <!-- VENDOR LOGIN -->
+  <div id="vendorLogin" class="step">
+    <div class="card">
+      <h4>Vendor Login</h4>
+      <input type="text" id="vendorEmail" placeholder="Email">
+      <input type="password" id="vendorPass" placeholder="Password">
+      <button onclick="vendorLogin()">Login</button>
+      <button class="btn-orange" onclick="paystackPayment()">Sign Up - ₦2,000/month</button>
+    </div>
+  </div>
+
+  <!-- VENDOR DASHBOARD -->
+  <div id="vendorDashboard" class="step">
+    <div class="card">
+      <h4>🏪 Vendor Dashboard</h4>
+      <p>Welcome! Update your prices below</p>
+      <select id="vendorItem">
+        <option value="">Select Item</option>
+      </select>
+      <div class="vendor-input">
+        <input type="number" id="vendorPrice" placeholder="Enter Price ₦">
+        <button style="width:120px;" onclick="updatePrice()">Update</button>
+      </div>
+      <div id="vendorMsg" style="color:green; margin-top:10px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentStep = 1;
+let selectedState = '';
+let selectedMarket = '';
+let selectedItem = '';
+
+// ALL 36 STATES + FCT WITH 10 MARKETS EACH
+const statesData = {
+  "Abia": ["Ariaria Market", "Ekeoha Market", "Ahia Ohuru", "Ubani Market", "Aba Main Market", "Eke Afor", "Ndiegoro Market", "Umuahia Main", "Osisioma Market", "Ohia Market"],
+  "Adamawa": ["Jimeta Market", "Mubi Market", "Yola Market", "Nassarawa Market", "Ganye Market", "Toungo Market", "Shelleng Market", "Guyuk Market", "Lamurde Market", "Hong Market"],
+  "Akwa Ibom": ["Itam Market", "Oron Market", "Eket Market", "Uyo Main", "Ikot Ekpene", "Abak Market", "Etinan Market", "Ikot Abasi", "Okobo Market", "Ibeno Market"],
+  "Anambra": ["Onitsha Main", "Eke Awka", "Nnewi Market", "Ose Okwodu", "Eke Nkpor", "Ogbaru Market", "Eke Oraifite", "Afor Igbo", "Oye Agu", "Eke Oba"],
+  "Bauchi": ["Muda Lawal", "Central Market", "Azare Market", "Misau Market", "Katagum Market", "Ningi Market", "Tafawa Balewa", "Alkaleri Market", "Ganjuwa Market", "Warji Market"],
+  "Bayelsa": ["Swali Market", "Tombia Market", "Yenagoa Main", "Brass Market", "Sagbama Market", "Ekeremor Market", "Ogbia Market", "Kolokuma Market", "Southern Ijaw", "Nembe Market"],
+  "Benue": ["Wurukum Market", "Makurdi Main", "Gboko Market", "Otukpo Market", "Katsina Ala", "Vandeikya Market", "Adikpo Market", "Agatu Market", "Apa Market", "Buruku Market"],
+  "Borno": ["Monday Market", "Maiduguri Main", "Bama Market", "Biu Market", "Gwoza Market", "Konduga Market", "Monguno Market", "Dikwa Market", "Ngala Market", "Jere Market"],
+  "Cross River": ["Marian Market", "Calabar Main", "Ugep Market", "Ogoja Market", "Ikom Market", "Obudu Market", "Akamkpa Market", "Bekwarra Market", "Yala Market", "Biase Market"],
+  "Delta": ["Ogbogonogo Market", "Warri Main", "Asaba Market", "Sapele Market", "Ughelli Market", "Abraka Market", "Effurun Market", "Burutu Market", "Kwale Market", "Agbor Market"],
+  "Ebonyi": ["Abakaliki Main", "Eke Market", "Afikpo Market", "Ntezi Market", "Ishielu Market", "Onicha Market", "Ohaozara Market", "Ivo Market", "Izzi Market", "Ezza Market"],
+  "Edo": ["Oba Market", "New Benin", "Eki Ora", "Auchi Market", "Ekpoma Market", "Irrua Market", "Uromi Market", "Sabongida", "Igarra Market", "Fugar Market"],
+  "Ekiti": ["Oja Oba", "Ado Main", "Ikere Market", "Oye Market", "Ijero Market", "Efon Market", "Ise Market", "Gbonyin Market", "Ido Market", "Ekiti East"],
+  "Enugu": ["Ogbete Main", "Kenyatta", "Garki Market", "Nsukka Market", "Eke Market", "Orba Market", "Afor Oghe", "Eke Obollo", "Oye Market", "Eke Ituku"],
+  "FCT": ["Wuse Market", "Garki Market", "Utako Market", "Kubwa Market", "Dutse Market", "Nyanya Market", "Mararaba Market", "Zuba Market", "Gwagwalada", "Kuje Market"],
+  "Gombe": ["Pantami Market", "Gombe Main", "Kumo Market", "Billiri Market", "Dukku Market", "Funakaye", "Kwami Market", "Nafada Market", "Shongom Market", "Yamaltu"],
+  "Imo": ["Eke Ukwu Owerri", "Relief Market", "Douglas Market", "Nworie Market", "World Bank Market", "Orlu Main Market", "Okigwe Main Market", "Mbaise Market", "Oguta Market", "Nkwo Nnewi"],
+  "Jigawa": ["Hadejia Market", "Dutse Main", "Kazaure Market", "Gumel Market", "Ringim Market", "Birnin Kudu", "Babura Market", "Garki Market", "Miga Market", "Kiyawa Market"],
+  "Kaduna": ["Central Market", "Kawo Market", "Zaria Market", "Sabon Gari", "Kafanchan", "Saminaka", "Birnin Gwari", "Ikara Market", "Lere Market", "Makera Market"],
+  "Kano": ["Sabon Gari", "Kano Central", "Dawanau Market", "Wapa Market", "Kurmi Market", "Fagge Market", "Gwarzo Market", "Bichi Market", "Rano Market", "Tarauni Market"],
+  "Katsina": ["Katsina Central", "Funtua Market", "Daura Market", "Malumfashi", "Kankia Market", "Dutsin Ma", "Bakori Market", "Mani Market", "Safana Market", "Ingawa Market"],
+  "Kebbi": ["Birnin Kebbi", "Argungu Market", "Zuru Market", "Yauri Market", "Gwandu Market", "Jega Market", "Bagudo Market", "Suru Market", "Wasagu Market", "Koko Market"],
+  "Kogi": ["Lokoja Main", "Idah Market", "Okene Market", "Kabba Market", "Ankpa Market", "Dekina Market", "Ejiba Market", "Ogaminana", "Isanlu Market", "Ajaokuta"],
+  "Kwara": ["Oja Oba", "Ilorin Main", "Offa Market", "Omu Aran", "Jebba Market", "Share Market", "Patigi Market", "Lafiagi Market", "Bode Saadu", "Kaiama Market"],
+  "Lagos": ["Mile 12 Market", "Oshodi Market", "Balogun Market", "Yaba Market", "Tejuosho", "Alaba International", "Agege Market", "Ikorodu Market", "Epe Market", "Badagry Market"],
+  "Nasarawa": ["Lafia Main", "Keffi Market", "Akwanga Market", "Nasarawa", "Toto Market", "Wamba Market", "Doma Market", "Obi Market", "Awe Market", "Karu Market"],
+  "Niger": ["Minna Central", "Bida Market", "Suleja Market", "Kontagora", "Lapai Market", "Agaie Market", "New Bussa", "Wushishi", "Rijau Market", "Shiroro Market"],
+  "Ogun": ["Kuto Market", "Sango Market", "Lafenwa Market", "Ijebu Ode", "Sagamu Market", "Abeokuta", "Ifo Market", "Ota Market", "Ewekoro", "Imeko Market"],
+  "Ondo": ["Oja Oba", "Akure Main", "Owo Market", "Ondo Market", "Ikare Market", "Ore Market", "Igbokoda", "Okitipupa", "Ilara Market", "Irele Market"],
+  "Osun": ["Oja Oba", "Osogbo Main", "Ilesa Market", "Ede Market", "Iwo Market", "Ikirun Market", "Ejigbo Market", "Ila Market", "Gbongan", "Ipetu Ijesa"],
+  "Oyo": ["Bodija Market", "Oje Market", "Aleshinloye", "Ogbomosho", "Saki Market", "Iseyin Market", "Oyo Market", "Eruwa Market", "Igboho Market", "Kisi Market"],
+  "Plateau": ["Terminus Market", "Jos Main", "Bukuru Market", "Pankshin", "Shendam", "Langtang", "Wase Market", "Quaan Pan", "Mangu Market", "Barkin Ladi"],
+  "Rivers": ["Mile 1 Market", "Mile 3 Market", "Port Harcourt", "Bonny Market", "Degema Market", "Bori Market", "Ahoada Market", "Omoku Market", "Eleme Market", "Oyigbo Market"],
+  "Sokoto": ["Sokoto Central", "Gusau Market", "Tambuwal", "Wurno Market", "Gwadabawa", "Illela Market", "Rabah Market", "Tureta Market", "Shagari", "Binji Market"],
+  "Taraba": ["Jalingo Main", "Wukari Market", "Ibi Market", "Bali Market", "Gassol Market", "Karim Lamido", "Lau Market", "Sardauna", "Zing Market", "Yorro Market"],
+  "Yobe": ["Damaturu Main", "Potiskum", "Nguru Market", "Buni Yadi", "Geidam Market", "Fune Market", "Gujba Market", "Tarmuwa", "Yunusari", "Jakusko"],
+  "Zamfara": ["Gusau Central", "Talata Mafara", "Kaura Namoda", "Anka Market", "Bakura Market", "Birnin Magaji", "Bukkuyum", "Gummi Market", "Maradun", "Maru Market"]
+};
+
+const foodItems = [
+  "Foreign Rice 50kg", "Local Rice 50kg", "Ofada Rice 5kg", "Basmati Rice 10kg", "Thailand Rice 50kg",
+  "Honey Beans 1 Paint", "White Beans 1 Paint", "Brown Beans 1 Paint", "Drum 1 Paint",
+  "Indomie Chicken Carton", "Indomie Onion Carton", "Golden Penny Pasta", "Spaghetti 1 Carton", "Supreme Noodles",
+  "Yam Tuber for Pounded", "Yam Tuber for Fried", "Yam Flour 1 Bag", "Garri White 1 Paint", "Garri Ijebu 1 Paint",
+  "Palm Oil 4L", "Vegetable Oil 4L", "Tomato 1 Basket", "Onion 1 Bag", "Pepper 1 Basket",
+  "Bread Big Loaf", "Bread Small Loaf", "Peak Milk 400g", "Cowbell Milk 400g", "Milo 400g", "Bournvita 400g",
+  "Tea Bag 100pcs", "Sugar 1kg", "Egg Crate of 30", "Chicken Live", "Frozen Chicken",
+  "Fish Titus 1 Carton", "Fish Mackerel 1 Carton", "Semovita 10kg", "Wheat 10kg", "Indomie 1 Carton"
+];
+
+function loadStates() {
+  const select = document.getElementById('stateSelect');
+  const vendorSelect = document.getElementById('vendorItem');
+  Object.keys(statesData).forEach(state => {
+    select.innerHTML += `<option value="${state}">${state}</option>`;
+  });
+  foodItems.forEach(item => {
+    vendorSelect.innerHTML += `<option value="${item}">${item}</option>`;
+  });
+}
+
+function loadMarkets() {
+  selectedState = document.getElementById('stateSelect').value;
+  if(!selectedState) return;
+  const grid = document.getElementById('marketGrid');
+  grid.innerHTML = '';
+  statesData[selectedState].forEach(market => {
+    grid.innerHTML += `<div class="grid-btn" onclick="loadItems('${market}')">📍 ${market}</div>`;
+  });
+  document.getElementById('selectedState').innerText = selectedState;
+  document.getElementById('headerText').innerText = `Step 2: Select Market in ${selectedState}`;
+  showStep(2);
+}
+
+function loadItems(market) {
+  selectedMarket = market;
+  document.getElementById('marketTitle').innerText = market + ', ' + selectedState;
+  const grid = document.getElementById('itemGrid');
+  grid.innerHTML = '';
+  foodItems.forEach(item => {
+    grid.innerHTML += `<div class="grid-btn" onclick="showPrices('${item}')">${item}</div>`;
+  });
+  document.getElementById('headerText').innerText = `Step 3: Select Item`;
+  showStep(3);
+}
+
+function showPrices(item) {
+  selectedItem = item;
+  document.getElementById('selectedItem').innerText = item;
+  const base = 50000 + Math.floor(Math.random() * 10000);
+  const stores = [
+    {name: "Baba Store", price: base},
+    {name: "Mama Store", price: base + 500},
+    {name: "Brother Store", price: base + 1200},
+    {name: "Sister Store", price: base + 2500}
+  ].sort((a,b) => a.price - b.price);
+  let html = '';
+  stores.forEach(s => {
+    html += `<div class="price-card"><div class="store-name">${s.name}</div><div class="price">₦${s.price.toLocaleString()}</div><div class="location">📍 ${selectedMarket}, ${selectedState}</div></div>`;
+  });
+  document.getElementById('priceList').innerHTML = html;
+  document.getElementById('headerText').innerText = `Step 4: Price Comparison`;
+  showStep(4);
+}
+
+function quickSearch() {
+  const item = document.getElementById('quickSearch').value;
+  if(!item) { alert('Type an item to search'); return; }
+  alert('Searching for "' + item + '" in all 36 states... Feature coming soon!');
+}
+
+function showVendorLogin() { showStep('vendorLogin'); }
+function vendorLogin() { showStep('vendorDashboard'); }
+function paystackPayment() { alert('Redirecting to Paystack for ₦2,000 payment...'); }
+function updatePrice() {
+  const item = document.getElementById('vendorItem').value;
+  const price = document.getElementById('vendorPrice').value;
+  if(!item ||!price) { alert('Select item and enter price'); return; }
+  document.getElementById('vendorMsg').innerText = `✅ ${item} updated to ₦${price}`;
+}
+
+function showStep(step) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  if(typeof step === 'number') {
+    document.getElementById('step' + step).classList.add('active');
+    currentStep = step;
+  } else {
+    document.getElementById(step).classList.add('active');
+  }
+  document.getElementById('backBtn').style.display = currentStep > 1? 'block' : 'none';
+}
+
+function goBack() {
+  if(currentStep === 4) showStep(3);
+  else if(currentStep === 3) showStep(2);
+  else if(currentStep === 2) showStep(1);
+  else { showStep(1); }
+}
+
+loadStates();
+</script>
+</body>
+</html>
